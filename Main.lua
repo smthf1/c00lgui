@@ -544,8 +544,8 @@ addBtnToPages({"Utilities"}, {text = "Part Orbit", callback = function()
 end, isToggle = true, tooltip = "Super ring"})
 
 addBtnToPages({"Utilities"}, {text = "Simplespy", callback = function()
-    loadstring(game:HttpGet("https://github.com/exxtremestuffs/SimpleSpySource/raw/master/SimpleSpy.lua"))()
-end, tooltip = "Smart ass 💔"})
+    loadstring(game:HttpGet("https://paste.ee/r/hK1Q4D65"))()
+end, tooltip = "Works for any executor?"})
 
 addBtnToPages({"Utilities"}, {text = "Save Pos", callback = function()
     local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
