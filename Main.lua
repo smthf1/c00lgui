@@ -21,7 +21,6 @@ local Debris = game:GetService("Debris")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
-
 local IYInvisRunning = false
 local IYIsInvis = false
 local IYInvisibleCharacter = nil
@@ -1262,7 +1261,7 @@ FunctionManager:register("Noclip GUI", function()
 end, "Extras", "Didn't even need this but whatever")
 
 FunctionManager:register("HatHub", function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/inkdupe/hat-scripts/refs/heads/main/updatedhathub.lua"))(
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/inkdupe/hat-scripts/refs/heads/main/updatedhathub.lua"))()
 end, "Extras", "Credits to creator")
 
 FunctionManager:register("Invis GUI", function()
