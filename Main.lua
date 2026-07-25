@@ -1,3 +1,6 @@
+--Thank you to c00lkiddk1ng for some things
+
+--==Services==--
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
@@ -6,14 +9,19 @@ local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
-
+local Debris = game:GetService("Debris")
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
 local IYInvisRunning = false
 local IYIsInvis = false
 local IYInvisibleCharacter = nil
 local IYInvisFixConnection = nil
 local IYInvisDiedConnection = nil
 local IYOriginalCharacter = nil
+--===========================--
 
+--==Random seed generator==--
 math.randomseed(os.time())
 local character_set = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -37,6 +45,8 @@ local function generate_string(length)
 	return table_concat(random_string)
 end
 
+--==Protecting gui==--
+
 local gui = Instance.new("ScreenGui")
 gui.Name = generate_string(math_random(1, 10))
 gui.ResetOnSpawn = false
@@ -49,10 +59,15 @@ else
     gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
+--==============================================--
+
+--========= sizes =========--
 local headerH, winW, winH = 30, 340, 240
 local btnW, btnH = 72, 23
 local scrollH = winH - headerH
+--=========================--
 
+--==Main script==--
 local header = Instance.new("Frame")
 header.Size = UDim2.new(0, winW, 0, headerH)
 header.Position = UDim2.new(0.5, -winW/2, 0.5, -(winH + headerH)/2)
@@ -109,10 +124,10 @@ pad.PaddingBottom = UDim.new(0, 5)
 local tooltip = Instance.new("Frame")
 tooltip.Size = UDim2.new(0, 150, 0, 30)
 tooltip.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-tooltip.BackgroundTransparency = 0.10
+tooltip.BackgroundTransparency = 0
 tooltip.BorderSizePixel = 0
 tooltip.Visible = false
-tooltip.ZIndex = 1000
+tooltip.ZIndex = 10000
 tooltip.Parent = gui
 
 local tooltipText = Instance.new("TextLabel")
@@ -125,6 +140,7 @@ tooltipText.TextSize = 12
 tooltipText.Font = Enum.Font.SourceSans
 tooltipText.TextWrapped = true
 tooltipText.TextScaled = true
+tooltipText.ZIndex = 100000
 tooltipText.Parent = tooltip
 
 local currentTooltipBtn = nil
@@ -214,32 +230,6 @@ local function createSliderWindow(name, minVal, maxVal, currentVal, callback)
     closeBtn.MouseButton1Click:Connect(function() frame:Destroy() end)
 end
 
-function createBtn(text, callback, isToggle, tooltipTextStr)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, btnW, 0, btnH)
-    btn.Text = text
-    btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.TextSize = 14
-    btn.Font = Enum.Font.SourceSans
-    btn.BackgroundColor3 = Color3.fromRGB(135, 0, 4)
-    btn.BorderSizePixel = 0
-    btn.TextWrapped = true
-    btn.TextScaled = true
-    btn.Parent = scroll
-    
-    if tooltipTextStr then
-        btn.MouseEnter:Connect(function() showTooltip(btn, tooltipTextStr) end)
-        btn.MouseLeave:Connect(function() hideTooltip() end)
-    end
-    
-    if callback then
-        btn.MouseButton1Click:Connect(function()
-            callback()
-        end)
-    end
-    return btn
-end
-
 local dragging, dragInput, dragStart, startPos
 local function update(input)
     local delta = input.Position - dragStart
@@ -261,6 +251,8 @@ end)
 
 UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end)
 
+--========= PAGES =========--
+
 local currentPage = 1
 local pages = {
     {name = "Utilities", buttons = {}},
@@ -270,6 +262,7 @@ local pages = {
     {name = "ALL", buttons = {}}
 }
 
+--===========================--
 local function loadPage(pageNum)
     currentPage = pageNum
     scroll:ClearAllChildren()
@@ -370,24 +363,26 @@ closeGuiBtn.MouseButton1Click:Connect(function()
     gui:Destroy()
 end)
 
-local function addBtnToPages(pageList, data)
-    local addedToAll = false
-    for _, pageName in ipairs(pageList) do
-        local page = nil
-        for _, p in ipairs(pages) do
-            if p.name == pageName then page = p break end
+local FunctionManager = {}
+function FunctionManager:register(name, callback, pageName, tooltip)
+    local targetPage = nil
+    for _, p in ipairs(pages) do
+        if p.name == pageName then 
+            targetPage = p 
+            break 
         end
-        if page then
-            table.insert(page.buttons, data)
-            if page.name ~= "ALL" and not addedToAll then
-                table.insert(pages[5].buttons, data)
-                addedToAll = true
-            end
+    end
+    
+    if targetPage then
+        local data = {text = name, callback = callback, tooltip = tooltip}
+        table.insert(targetPage.buttons, data)
+        if targetPage.name ~= "ALL" then
+            table.insert(pages[5].buttons, data)
         end
     end
 end
 
-addBtnToPages({"Utilities"}, {text = "Server Hop", callback = function()
+FunctionManager:register("Server Hop", function()
     local placeId = game.PlaceId
     local url = "https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100"
     
@@ -403,9 +398,9 @@ addBtnToPages({"Utilities"}, {text = "Server Hop", callback = function()
             end
         end
     end
-end, tooltip = "Hops to a different server"})
+end, "Utilities", "Hops to a different server")
 
-addBtnToPages({"Utilities"}, {text = "Infinite Jump", callback = function()
+FunctionManager:register("Infinite Jump", function()
     if not _G.InfiniteJumpSetup then
         _G.InfiniteJumpSetup = true
         _G.InfiniteJump = false
@@ -418,9 +413,9 @@ addBtnToPages({"Utilities"}, {text = "Infinite Jump", callback = function()
     end
     _G.InfiniteJump = not _G.InfiniteJump
     return _G.InfiniteJump
-end, isToggle = true, tooltip = "Basically flying but jumping"})
+end, "Utilities", "Basically flying but jumping")
 
-addBtnToPages({"Utilities"}, {text = "Checkpoint", callback = function()
+FunctionManager:register("Checkpoint", function()
     local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local root = character:WaitForChild("HumanoidRootPart")
     _G.SavedPlayerPosition = root.CFrame
@@ -429,131 +424,150 @@ addBtnToPages({"Utilities"}, {text = "Checkpoint", callback = function()
         task.wait(0.2)
         if _G.SavedPlayerPosition then newRoot.CFrame = _G.SavedPlayerPosition end
     end)
-end, tooltip = "Saves your character position on respawn."})
+end, "Utilities", "Saves your character position on respawn.")
 
-addBtnToPages({"Utilities"}, {text = "Part Orbit", callback = function()
-    if _G.OrbitConnection then
-        _G.OrbitConnection:Disconnect()
-        _G.OrbitConnection = nil
+FunctionManager:register("Orbit All nearby parts", function()
+    if _G.OrbitEnabled then
+        _G.OrbitEnabled = false
         if _G.CleanOrbitConnections then _G.CleanOrbitConnections() end
         return false
     end
     
-    if not getgenv().Network then
-        getgenv().Network = {
-            BaseParts = {},
-            Velocity = Vector3.new(14.46262424, 14.46262424, 14.46262424)
-        }
-        Network.RetainPart = function(Part)
-            if typeof(Part) == "Instance" and Part:IsA("BasePart") and Part:IsDescendantOf(Workspace) then
-                table.insert(Network.BaseParts, Part)
+    _G.OrbitEnabled = true
+
+    local function WHTXC_fake_script()
+        if not getgenv().Network then
+            getgenv().Network = {
+                BaseParts = {},
+                Velocity = Vector3.new(14.46262424, 14.46262424, 14.46262424)
+            }
+            Network.RetainPart = function(Part)
+                if typeof(Part) == "Instance" and Part:IsA("BasePart") and Part:IsDescendantOf(Workspace) then
+                    table.insert(Network.BaseParts, Part)
+                    pcall(function()
+                        Part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+                        Part.CanCollide = false
+                    end)
+                end
+            end
+            local function EnablePartControl()
+                LocalPlayer.ReplicationFocus = Workspace
+                RunService.Heartbeat:Connect(function()
+                    pcall(function()
+                        sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
+                    end)
+                    for _, Part in pairs(Network.BaseParts) do
+                        if Part:IsDescendantOf(Workspace) then
+                            Part.AssemblyLinearVelocity = Network.Velocity
+                        end
+                    end
+                end)
+            end
+            EnablePartControl()
+        end
+
+        -- Slowed down the speed and pull attraction for a smoother orbit
+        _G.OrbitRadius = 30
+        _G.OrbitHeight = 10
+        _G.OrbitSpeed = 0.02
+        _G.OrbitAttraction = 150 
+
+        local function RetainPart(Part)
+            if Part:IsA("BasePart") and Part:IsDescendantOf(Workspace) then
+                if Part.Parent == LocalPlayer.Character or Part:IsDescendantOf(LocalPlayer.Character) then
+                    return false
+                end
                 pcall(function()
                     Part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
                     Part.CanCollide = false
                 end)
+                return true
+            end
+            return false
+        end
+
+        local parts = {}
+        local function addPart(part)
+            if RetainPart(part) then
+                if not table.find(parts, part) then
+                    table.insert(parts, part)
+                end
             end
         end
-        local function EnablePartControl()
-            LocalPlayer.ReplicationFocus = Workspace
-            RunService.Heartbeat:Connect(function()
-                pcall(function()
-                    sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
-                end)
-                for _, Part in pairs(Network.BaseParts) do
-                    if Part:IsDescendantOf(Workspace) then
-                        Part.AssemblyLinearVelocity = Network.Velocity
+
+        local function removePart(part)
+            local index = table.find(parts, part)
+            if index then
+                table.remove(parts, index)
+            end
+        end
+
+        for _, part in pairs(Workspace:GetDescendants()) do
+            addPart(part)
+        end
+
+        local dAdd = Workspace.DescendantAdded:Connect(addPart)
+        local dRem = Workspace.DescendantRemoving:Connect(removePart)
+
+        _G.CleanOrbitConnections = function()
+            pcall(function()
+                dAdd:Disconnect()
+                dRem:Disconnect()
+            end)
+        end
+
+        local angleOffset = 0
+
+        -- Handled inside a while loop to properly utilize the coroutine wrapper
+        while _G.OrbitEnabled do
+            RunService.Heartbeat:Wait()
+            local humanoidRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            
+            if humanoidRootPart then
+                local center = humanoidRootPart.Position
+                angleOffset = angleOffset + _G.OrbitSpeed
+                
+                for i, part in ipairs(parts) do
+                    if part.Parent then
+                        -- Math fix: Spaces parts evenly in a ring rather than clumping them together
+                        local partAngle = angleOffset + (i / #parts) * (math.pi * 2)
+                        
+                        local targetPos = Vector3.new(
+                            center.X + math.cos(partAngle) * _G.OrbitRadius,
+                            center.Y + math.sin(angleOffset + (i / #parts) * math.pi) * _G.OrbitHeight,
+                            center.Z + math.sin(partAngle) * _G.OrbitRadius
+                        )
+                        
+                        local direction = targetPos - part.Position
+                        
+                        -- Prevent NaN velocity crashes when part is perfectly at the target position
+                        if direction.Magnitude > 0.1 then
+                            part.AssemblyLinearVelocity = direction.Unit * _G.OrbitAttraction
+                        else
+                            part.AssemblyLinearVelocity = Vector3.zero
+                        end
                     end
                 end
-            end)
-        end
-        EnablePartControl()
-    end
-
-    _G.OrbitRadius = 50
-    _G.OrbitHeight = 100
-    _G.OrbitSpeed = 1
-    _G.OrbitAttraction = 1000
-
-    local function RetainPart(Part)
-        if Part:IsA("BasePart") and Part:IsDescendantOf(Workspace) then
-            if Part.Parent == LocalPlayer.Character or Part:IsDescendantOf(LocalPlayer.Character) then
-                return false
-            end
-            pcall(function()
-                Part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
-                Part.CanCollide = false
-            end)
-            return true
-        end
-        return false
-    end
-
-    local parts = {}
-    local function addPart(part)
-        if RetainPart(part) then
-            if not table.find(parts, part) then
-                table.insert(parts, part)
             end
         end
     end
 
-    local function removePart(part)
-        local index = table.find(parts, part)
-        if index then
-            table.remove(parts, index)
-        end
-    end
-
-    for _, part in pairs(Workspace:GetDescendants()) do
-        addPart(part)
-    end
-
-    local dAdd = Workspace.DescendantAdded:Connect(addPart)
-    local dRem = Workspace.DescendantRemoving:Connect(removePart)
-
-    _G.OrbitConnection = RunService.Heartbeat:Connect(function()
-        local humanoidRootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if humanoidRootPart then
-            local tornadoCenter = humanoidRootPart.Position
-            for _, part in pairs(parts) do
-                if part.Parent then
-                    local pos = part.Position
-                    local distance = (Vector3.new(pos.X, tornadoCenter.Y, pos.Z) - tornadoCenter).Magnitude
-                    local angle = math.atan2(pos.Z - tornadoCenter.Z, pos.X - tornadoCenter.X)
-                    local newAngle = angle + math.rad(_G.OrbitSpeed)
-                    local targetPos = Vector3.new(
-                        tornadoCenter.X + math.cos(newAngle) * math.min(_G.OrbitRadius, distance),
-                        tornadoCenter.Y + (_G.OrbitHeight * (math.abs(math.sin((pos.Y - tornadoCenter.Y) / _G.OrbitHeight)))),
-                        tornadoCenter.Z + math.sin(newAngle) * math.min(_G.OrbitRadius, distance)
-                    )
-                    local directionToTarget = (targetPos - part.Position).Unit
-                    part.AssemblyLinearVelocity = directionToTarget * _G.OrbitAttraction
-                end
-            end
-        end
-    end)
-
-    _G.CleanOrbitConnections = function()
-        pcall(function()
-            dAdd:Disconnect()
-            dRem:Disconnect()
-        end)
-    end
+    coroutine.wrap(WHTXC_fake_script)()
     
     return true 
-end, isToggle = true, tooltip = "Super ring"})
+end, "Utilities", "You have to be close the unanchored parts to work!")
 
-addBtnToPages({"Utilities"}, {text = "Simplespy", callback = function()
+FunctionManager:register("Simplespy", function()
     loadstring(game:HttpGet("https://paste.ee/r/hK1Q4D65"))()
-end, tooltip = "Works for any executor?"})
+end, "Utilities", "Works for any executor?")
 
-addBtnToPages({"Utilities"}, {text = "Save Pos", callback = function()
+FunctionManager:register("Save Pos", function()
     local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local root = character:WaitForChild("HumanoidRootPart")
     _G.SavedPlayerPosition = root.CFrame
-end, tooltip = "Checkpoint"})
+end, "Utilities", "Checkpoint")
 
-addBtnToPages({"Utilities"}, {text = "Load Pos", callback = function()
+FunctionManager:register("Load Pos", function()
     if _G.SavedPlayerPosition then
         local character = LocalPlayer.Character
         if character then
@@ -563,9 +577,9 @@ addBtnToPages({"Utilities"}, {text = "Load Pos", callback = function()
             end
         end
     end
-end, tooltip = "I ALWAYS COME BACK"})
+end, "Utilities", "I ALWAYS COME BACK")
 
-addBtnToPages({"Utilities"}, {text = "Noclip", callback = function()
+FunctionManager:register("Noclip", function()
     _G.NoclipEnabled = not (_G.NoclipEnabled or false)
     
     if _G.NoclipEnabled then
@@ -587,9 +601,9 @@ addBtnToPages({"Utilities"}, {text = "Noclip", callback = function()
     end
     
     return _G.NoclipEnabled
-end, isToggle = true, tooltip = "just got wall hacks"})
+end, "Utilities", "just got wall hacks")
 
-addBtnToPages({"Utilities", "Trolling"}, {text = "Fly", callback = function()
+FunctionManager:register("Fly", function()
     _G.FlyEnabled = not (_G.FlyEnabled == true)
     
     local mouse = LocalPlayer:GetMouse()
@@ -673,9 +687,9 @@ addBtnToPages({"Utilities", "Trolling"}, {text = "Fly", callback = function()
     end
     
     return _G.FlyEnabled
-end, isToggle = true, tooltip = "Take to the skies"})
+end, "Utilities", "Take to the skies")
 
-addBtnToPages({"Utilities"}, {text = "Sit", callback = function()
+FunctionManager:register("Sit", function()
     local character = LocalPlayer.Character
     if character then
         local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -683,9 +697,9 @@ addBtnToPages({"Utilities"}, {text = "Sit", callback = function()
             humanoid.Sit = true
         end
     end
-end, tooltip = "Take a seat"})
+end, "Utilities", "Take a seat")
 
-addBtnToPages({"Utilities", "Trolling"}, {text = "Jump up", callback = function()
+FunctionManager:register("Jump up", function()
     local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if humanoid then
@@ -693,9 +707,9 @@ addBtnToPages({"Utilities", "Trolling"}, {text = "Jump up", callback = function(
         humanoid.JumpPower = 350
         humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
     end
-end, tooltip = "its a bird its a plane its a skid?"})
+end, "Utilities", "its a bird its a plane its a skid?")
 
-addBtnToPages({"Utilities", "Trolling"}, {text = "TP to Mouse", callback = function()
+FunctionManager:register("TP to Mouse", function()
     local mouse = LocalPlayer:GetMouse()
     if mouse.Target then
         local character = LocalPlayer.Character
@@ -703,33 +717,33 @@ addBtnToPages({"Utilities", "Trolling"}, {text = "TP to Mouse", callback = funct
             character.HumanoidRootPart.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
         end
     end
-end, tooltip = "BROKEN"})
+end, "Utilities", "BROKEN")
 
-addBtnToPages({"Trolling"}, {text = "Dark Dex", callback = function()
+FunctionManager:register("Dark Dex", function()
     loadstring(game:HttpGet("https://obj.wearedevs.net/2/scripts/Dex%20Explorer.lua"))()
-end, tooltip = "Take a peek under the hood"})
+end, "Trolling", "Take a peek under the hood")
 
-addBtnToPages({"Trolling"}, {text = "Backflip", callback = function()
+FunctionManager:register("Backflip", function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/Skibxi/BackflipGoAndFlip/refs/heads/main/N0tAC00lgui"))()
-end, tooltip = "Look what i can do"})
+end, "Trolling", "Look what i can do")
 
-addBtnToPages({"Trolling"}, {text = "Fly Gui", callback = function()
+FunctionManager:register("Fly Gui", function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))()
-end, tooltip = "Credits to the orginal creator"})
+end, "Trolling", "Credits to the orginal creator")
 
-addBtnToPages({"Trolling"}, {text = "Part Orbit GUI", callback = function()
+FunctionManager:register("Part Orbit", function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/chesslovers69/Super-ring-parts-v6/refs/heads/main/Bylukaslol"))()
-end, tooltip = "Better orbit"})
+end, "Trolling", "Better orbit")
 
-addBtnToPages({"Trolling"}, {text = "Backdoor", callback = function()
+FunctionManager:register("Backdoor", function()
     loadstring(game:HttpGet('https://raw.githubusercontent.com/Its-LALOL/LALOL-Hub/main/Backdoor-Scanner/script'))()
-end, tooltip = "Best and fast scanner"})
+end, "Trolling", "Best and fast scanner")
 
-addBtnToPages({"Trolling"}, {text = "Admin", callback = function()
+FunctionManager:register("Admin", function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
-end, tooltip = "I just got admin gng"})
+end, "Trolling", "I just got admin gng")
 
-addBtnToPages({"Trolling"}, {text = "Decal Spam", callback = function()
+FunctionManager:register("Decal Spam", function()
     local decalID = "rbxassetid://8408806737"
     local skyID = "rbxassetid://10560525674"
     local count = 0
@@ -769,9 +783,9 @@ addBtnToPages({"Trolling"}, {text = "Decal Spam", callback = function()
             end
         end
     end
-end, tooltip = "NOT FE"})
+end, "Trolling", "NOT FE")
 
-addBtnToPages({"Visuals"}, {text = "Dance", callback = function()
+FunctionManager:register("Dance", function()
     if not _G.AnimationTrack then
         local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local humanoid = character:WaitForChild("Humanoid")
@@ -788,9 +802,9 @@ addBtnToPages({"Visuals"}, {text = "Dance", callback = function()
         _G.AnimationTrack:Stop()
     end
     return _G.AnimationPlaying
-end, isToggle = true, tooltip = "Dancing here!"})
+end, "Visuals", "Dancing here!")
 
-addBtnToPages({"Visuals"}, {text = "Scare Closest", callback = function()
+FunctionManager:register("Scare Closest", function()
     local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local root = character:WaitForChild("HumanoidRootPart")
     local closestPlayer
@@ -819,13 +833,243 @@ addBtnToPages({"Visuals"}, {text = "Scare Closest", callback = function()
             root.CFrame = originalPosition
         end
     end
-end, tooltip = "Fnaf refence"})
+end, "Visuals", "Fnaf refence")
 
-addBtnToPages({"Trolling"}, {text = "WAAPP Hub", callback = function()
+FunctionManager:register("WAAPP Hub", function()
     loadstring(game:HttpGet(('https://raw.githubusercontent.com/Hm5011/hussain/refs/heads/main/Work%20at%20a%20pizza%20place'),true))()
-end, tooltip = "Work at a pizza place 2014"})
+end, "Trolling", "Credits to creator")
 
-addBtnToPages({"Visuals"}, {text = "ESP", callback = function()
+FunctionManager:register("Telekinesis", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/randomstring0/Qwerty/refs/heads/main/qwerty1.lua"))()
+end, "Trolling", "Credits to creator")
+
+FunctionManager:register("MM2 Hub", function()
+    loadstring(game:HttpGet('https://raw.smokingscripts.org/vertex.lua'))()
+end, "Trolling", "Credits to creator")
+
+FunctionManager:register("Dropkick GUI", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/gsm231/Fe-DropKick/refs/heads/main/V0.1"))()
+end, "Trolling", "Credits to creator")
+
+--=========== c00lkiddk1ngs john doe script ===========--
+FunctionManager:register("John Doe", function()
+    local player = LocalPlayer
+    local mouse = player:GetMouse()
+
+    local redSkyboxAssetId = "rbxassetid://1012887"
+    local sky = Lighting:FindFirstChildOfClass("Sky")
+    if not sky then
+        sky = Instance.new("Sky", Lighting)
+    end
+    sky.SkyboxBk = redSkyboxAssetId
+    sky.SkyboxDn = redSkyboxAssetId
+    sky.SkyboxFt = redSkyboxAssetId
+    sky.SkyboxLf = redSkyboxAssetId
+    sky.SkyboxRt = redSkyboxAssetId
+    sky.SkyboxUp = redSkyboxAssetId
+
+    if not ReplicatedStorage:FindFirstChild("juisdfj0i32i0eidsuf0iok") then
+        local detection = Instance.new("Decal")
+        detection.Name = "juisdfj0i32i0eidsuf0iok"
+        detection.Parent = ReplicatedStorage
+    end
+
+    if not player.PlayerGui:FindFirstChild("PersistentSoundGui") then
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "PersistentSoundGui"
+        screenGui.ResetOnSpawn = false
+        screenGui.Parent = player:WaitForChild("PlayerGui")
+
+        local soundBtn = Instance.new("TextButton")
+        soundBtn.Size = UDim2.new(0, 150, 0, 50)
+        soundBtn.Position = UDim2.new(0.02, 0, 0.477, 0)
+        soundBtn.Text = "Sound Toggle"
+        soundBtn.Font = Enum.Font.SourceSansBold
+        soundBtn.TextSize = 20
+        soundBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        soundBtn.TextColor3 = Color3.new(1, 1, 1)
+        soundBtn.Parent = screenGui
+
+        local backgroundSound = SoundService:FindFirstChild("PersistentBGSound")
+        if not backgroundSound then
+            backgroundSound = Instance.new("Sound")
+            backgroundSound.Name = "PersistentBGSound"
+            backgroundSound.SoundId = "rbxassetid://19094700"
+            backgroundSound.PlaybackSpeed = 0.221
+            backgroundSound.Looped = true
+            backgroundSound.Volume = 1
+            backgroundSound.Parent = SoundService
+            backgroundSound:Play()
+        end
+
+        soundBtn.Activated:Connect(function()
+            backgroundSound.Playing = not backgroundSound.Playing
+        end)
+    end
+
+    local function setupCharacter(character)
+        local humanoid = character:WaitForChild("Humanoid")
+        local torso = character:WaitForChild("Torso")
+        local hrp = character:WaitForChild("HumanoidRootPart")
+
+        local tool = Instance.new("Tool")
+        tool.Name = "Slash"
+        tool.RequiresHandle = false
+        tool.Parent = player.Backpack
+
+        tool.Activated:Connect(function()
+            local animation = Instance.new("Animation")
+            animation.AnimationId = "rbxassetid://186934658"
+            local track = humanoid:LoadAnimation(animation)
+            track:Play()
+            track:AdjustSpeed(2)
+
+            local s = Instance.new("Sound", torso)
+            s.SoundId = "rbxassetid://28144425"
+            s:Play()
+
+            task.wait(0.2)
+
+            local s2 = Instance.new("Sound", torso)
+            s2.SoundId = "rbxassetid://429400881"
+            s2.Volume = 0.2
+            s2:Play()
+        end)
+
+        local naeeym = Instance.new("BillboardGui", character)
+        naeeym.Size = UDim2.new(0, 100, 0, 40)
+        naeeym.StudsOffset = Vector3.new(0, 2, 0)
+        naeeym.Adornee = character:WaitForChild("Head")
+
+        local tecks = Instance.new("TextLabel", naeeym)
+        tecks.BackgroundTransparency = 1
+        tecks.BorderSizePixel = 0
+        tecks.Font = Enum.Font.Fantasy
+        tecks.TextSize = 24
+        tecks.TextStrokeTransparency = 0
+        tecks.TextStrokeColor3 = Color3.new(0, 0, 0)
+        tecks.TextColor3 = Color3.new(0, 0, 0)
+        tecks.Size = UDim2.new(1, 0, 0.5, 0)
+        tecks.Text = "John Doe"
+
+        local function changeName(newName)
+            tecks.Text = newName
+        end
+
+        local function shakeTag()
+            local originalOffset = naeeym.StudsOffset
+            for _ = 1, 10 do
+                naeeym.StudsOffset = originalOffset + Vector3.new(math.random(-1,1), math.random(-1,1), math.random(-1,1))
+                task.wait(0.05)
+            end
+            naeeym.StudsOffset = originalOffset
+        end
+
+        coroutine.wrap(function()
+            while character:IsDescendantOf(workspace) do
+                changeName("BURN IN HELL")
+                shakeTag()
+                task.wait(0.2)
+                changeName("STOP")
+                task.wait(0.1)
+                changeName("JUST GIVE UP")
+                shakeTag()
+                task.wait(0.2)
+                changeName("MARCH 18th")
+                shakeTag()
+                task.wait(0.2)
+                changeName("JOHN DOE")
+                shakeTag()
+                task.wait(0.3)
+                changeName("HOPELESS")
+                shakeTag()
+                task.wait(0.3)
+            end
+        end)()
+
+        local footPartSize = Vector3.new(10, 0.5, 10)
+        local floorPartColor = BrickColor.Black()
+        local floorMaterial = Enum.Material.Neon
+        local yOffset = -2.8
+        local lastPosition = hrp.Position
+        local standingTimer = 0
+
+        RunService.Heartbeat:Connect(function(dt)
+            if not character:IsDescendantOf(workspace) then return end
+            local currentPosition = hrp.Position
+            standingTimer += dt
+            local distanceMoved = (currentPosition - lastPosition).Magnitude
+            local stepPosition = Vector3.new(currentPosition.X, hrp.Position.Y + yOffset, currentPosition.Z)
+
+            local function createFootstep(position)
+                local part = Instance.new("Part")
+                part.Size = footPartSize
+                part.Position = position
+                part.Anchored = true
+                part.CanCollide = false
+                part.BrickColor = floorPartColor
+                part.Material = floorMaterial
+                part.Transparency = 0.5
+                part.Parent = workspace
+                task.spawn(function()
+                    for i = 1, 10 do
+                        part.Transparency = i * 0.03
+                        task.wait(0.05)
+                    end
+                end)
+                Debris:AddItem(part, 1)
+            end
+
+            if distanceMoved > 1 then
+                createFootstep(stepPosition)
+                lastPosition = currentPosition
+                standingTimer = 0
+            elseif standingTimer > 0.5 then
+                createFootstep(stepPosition)
+                standingTimer = 0
+            end
+        end)
+
+        local movel = 0.1
+        local hiddenfling = true
+
+        local function fling()
+            while hiddenfling and character:IsDescendantOf(workspace) do
+                if hrp then
+                    local originalVelocity = hrp.Velocity
+                    hrp.Velocity = originalVelocity * 10000 + Vector3.new(0, 10000, 0)
+                    RunService.RenderStepped:Wait()
+                    hrp.Velocity = originalVelocity
+                    RunService.Stepped:Wait()
+                    hrp.Velocity = originalVelocity + Vector3.new(0, movel, 0)
+                    movel = -movel
+                end
+                RunService.Heartbeat:Wait()
+            end
+        end
+        coroutine.wrap(fling)()
+    end
+
+    player.CharacterAdded:Connect(setupCharacter)
+    if player.Character then
+        setupCharacter(player.Character)
+    end
+
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == Enum.KeyCode.T then
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local target = mouse.Hit
+                if target then
+                    character:MoveTo(target.Position)
+                end
+            end
+        end
+    end)
+end, "Trolling", "Credits to c00lkiddk1ng")
+
+FunctionManager:register("ESP", function()
     _G.ESPEnabled = not (_G.ESPEnabled or false)
     for _, plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
@@ -843,7 +1087,7 @@ addBtnToPages({"Visuals"}, {text = "ESP", callback = function()
                         text.Size = UDim2.new(1, 0, 1, 0)
                         text.BackgroundTransparency = 1
                         text.Text = plr.Name
-                        text.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        text.TextColor3 = Color3.fromRGB(255, 0, 0)
                         text.TextStrokeTransparency = 0
                         text.TextScaled = true
                         text.TextWrapped = true
@@ -857,15 +1101,15 @@ addBtnToPages({"Visuals"}, {text = "ESP", callback = function()
         end
     end
     return _G.ESPEnabled
-end, isToggle = true, tooltip = "Cooked i just got wall hacks"})
+end, "Visuals", "Cooked i just got wall hacks")
 
-addBtnToPages({"Visuals"}, {text = "VC Unban", callback = function()
+FunctionManager:register("VC Unban", function()
     pcall(function()
         game:GetService("VoiceChatService"):JoinVoice()
     end)
-end, tooltip = "unban"})
+end, "Visuals", "credits to the creator")
 
-addBtnToPages({"Visuals"}, {text = "IY Invis", callback = function()
+FunctionManager:register("Invis", function()
     local Player = LocalPlayer
     
     if IYIsInvis then
@@ -998,42 +1242,47 @@ addBtnToPages({"Visuals"}, {text = "IY Invis", callback = function()
     end
     
     return true
-end, isToggle = true, tooltip = "Credits to IY"})
+end, "Visuals", "Credits to IY")
 
-addBtnToPages({"Extras"}, {text = "Chat GUI", callback = function()
+FunctionManager:register("Chat GUI", function()
     loadstring(game:HttpGet("https://github.com/codzal/rbxscripts/raw/refs/heads/main/chatgui.lua", true))()
-end, tooltip = "Credits to the orginal creator"})
+end, "Extras", "Credits to the orginal creator")
 
-addBtnToPages({"Extras"}, {text = "Noclip GUI", callback = function()
+FunctionManager:register("Noclip GUI", function()
     loadstring(game:HttpGet("https://pastebin.com/raw/RV2jb0hn"))()
-end, tooltip = "Didn't even need this but whatever"})
+end, "Extras", "Didn't even need this but whatever")
 
-addBtnToPages({"Extras"}, {text = "Invis GUI", callback = function()
+FunctionManager:register("HatHub", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/inkdupe/hat-scripts/refs/heads/main/updatedhathub.lua"))(
+end, "Extras", "Credits to creator")
+
+FunctionManager:register("Invis GUI", function()
     loadstring(game:HttpGet('https://pastebin.com/raw/3Rnd9rHf'))()
-end, tooltip = "Credits to the orginal creator"})
+end, "Extras", "Credits to the orginal creator")
 
-addBtnToPages({"Extras"}, {text = "c00lclan v1", callback = function()
+FunctionManager:register("c00lclan v1", function()
     loadstring(game:HttpGet('https://raw.githubusercontent.com/cfsmi2/c00lguiv1/refs/heads/main/Main.lua'))()
-end, tooltip = "More scripts"})
+end, "Extras", "More scripts")
 
-addBtnToPages({"Extras"}, {text = "Fling GUI", callback = function()
+FunctionManager:register("Fling GUI", function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/ADSKerOffical/FlingPlayers/main/FlingGUI"))()
-end, tooltip = "Needs collision to work"})
+end, "Extras", "Needs collision to work")
 
-addBtnToPages({"Extras"}, {text = "Server admin", callback = function()
+FunctionManager:register("Server admin", function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/ONEReverseCard/My-Scripts/main/Netless%20Server%20Admin.md"))()
-end, tooltip = "Hats needed"})
+end, "Extras", "Hats needed")
 
-addBtnToPages({"Extras"}, {text = "Walkspeed slider", callback = function()
+--=========== SLIDERS ===========--
+FunctionManager:register("Walkspeed slider", function()
     createSliderWindow("WalkSpeed", 16, 250, 16, function(val)
         local char = LocalPlayer.Character
         if char and char:FindFirstChildOfClass("Humanoid") then
             char:FindFirstChildOfClass("Humanoid").WalkSpeed = val
         end
     end)
-end, tooltip = "Gotta go fast!"})
+end, "Extras", "Control your Walkspeed")
 
-addBtnToPages({"Extras"}, {text = "Jumppower slider", callback = function()
+FunctionManager:register("Jumppower slider", function()
     createSliderWindow("JumpPower", 50, 400, 50, function(val)
         local char = LocalPlayer.Character
         if char and char:FindFirstChildOfClass("Humanoid") then
@@ -1041,6 +1290,9 @@ addBtnToPages({"Extras"}, {text = "Jumppower slider", callback = function()
             char:FindFirstChildOfClass("Humanoid").JumpPower = val
         end
     end)
-end, tooltip = "It's a me mario!"})
+end, "Extras", "Control your Jumppower")
+--=====================================--
 
 loadPage(5)
+
+--======== END OF SCRIPT SKIDS ========--
