@@ -21,6 +21,7 @@ local Debris = game:GetService("Debris")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
+
 local IYInvisRunning = false
 local IYIsInvis = false
 local IYInvisibleCharacter = nil
