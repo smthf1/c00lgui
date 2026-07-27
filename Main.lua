@@ -755,6 +755,30 @@ FunctionManager:register("Decal Spam", function()
     local skyID = "rbxassetid://10560525674"
     local count = 0
     
+    -- 1. Download and save the audio file from GitHub
+    local rawUrl = "https://raw.githubusercontent.com/smthf1/c00lgui/main/c00lkidd%20Spooky%20Scary%20Skeletons.mp3"
+    local fileName = "electr0 spook.mp3"
+    
+    pcall(function()
+        local audioData = game:HttpGet(rawUrl)
+        writefile(fileName, audioData)
+    end)
+    
+    -- 2. Create and play the sound using getcustomasset
+    pcall(function()
+        local getasset = getcustomasset or getsynasset
+        if getasset then
+            local sound = Instance.new("Sound")
+            sound.Name = "Electr0SpookSound"
+            sound.SoundId = getasset(fileName)
+            sound.Looped = true
+            sound.Volume = 1
+            sound.Parent = game:GetService("SoundService")
+            sound:Play()
+        end
+    end)
+    
+    -- 3. Original Decal & Skybox Spam
     local lighting = game:GetService("Lighting")
     local sky = lighting:FindFirstChildOfClass("Sky")
     
