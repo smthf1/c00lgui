@@ -29,7 +29,7 @@ local IYInvisDiedConnection = nil
 local IYOriginalCharacter = nil
 --===========================--
 
---==Random seed generator==--
+--==Random string generator==--
 math.randomseed(os.time())
 local character_set = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -474,7 +474,6 @@ FunctionManager:register("Orbit All nearby parts", function()
             EnablePartControl()
         end
 
-        -- Slowed down the speed and pull attraction for a smoother orbit
         _G.OrbitRadius = 30
         _G.OrbitHeight = 10
         _G.OrbitSpeed = 0.02
@@ -774,10 +773,10 @@ FunctionManager:register("Decal Spam", function()
     for _, part in ipairs(Workspace:GetDescendants()) do
         if part:IsA("BasePart") then
             pcall(function()
-                if not part:FindFirstChild("c00lDecal") then
+                if not part:FindFirstChild("0i0fj0i32kjuisdfieidsu") then
                     for _, face in ipairs(Enum.NormalId:GetEnumItems()) do
                         local decal = Instance.new("Decal")
-                        decal.Name = "c00lDecal"
+                        decal.Name = "0i0fj0i32kjuisdfieidsu"
                         decal.Texture = decalID
                         decal.Face = face
                         decal.Parent = part
@@ -1086,7 +1085,7 @@ FunctionManager:register("ESP", function()
                 if _G.ESPEnabled then
                     if not head:FindFirstChild("NameESP") then
                         local espGui = Instance.new("BillboardGui")
-                        espGui.Name = "NameESP"
+                        espGui.Name = "0i0fj0iids2kjuisdfieidsu"
                         espGui.Size = UDim2.new(0, 200, 0, 50)
                         espGui.StudsOffset = Vector3.new(0, 3, 0)
                         espGui.AlwaysOnTop = true
